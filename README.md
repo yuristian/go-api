@@ -44,8 +44,10 @@ go run ./cmd/migrate -action=create -name add_users_table
 
 Output:
 
+```
 migrations/1736438001_add_users_table.up.sql
 migrations/1736438001_add_users_table.down.sql
+```
 
 ## 🟩 2.2 Apply All Up Migrations
 
@@ -77,7 +79,9 @@ go run ./cmd/migrate -action=version
 
 Output contoh:
 
+```
 current version: 1, dirty: false
+```
 
 ## 🟩 2.5 Force Version (Recovery Mode)
 
