@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/yuristian/go-api/internal/infrastructure/config"
+	"github.com/yuristian/go-api/internal/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

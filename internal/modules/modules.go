@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"github.com/yuristian/go-api/internal/infrastructure/auth"
+	"github.com/yuristian/go-api/internal/auth"
 
 	userInfra "github.com/yuristian/go-api/internal/modules/user/infrastructure"
 	userUsecase "github.com/yuristian/go-api/internal/modules/user/usecase"

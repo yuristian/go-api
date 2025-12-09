@@ -3,7 +3,7 @@ package usecase
 import (
 	"strconv"
 
-	"github.com/yuristian/go-api/internal/infrastructure/auth"
+	"github.com/yuristian/go-api/internal/auth"
 	user "github.com/yuristian/go-api/internal/modules/user/domain"
 	"golang.org/x/crypto/bcrypt"
 )
