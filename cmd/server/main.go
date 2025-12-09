@@ -8,10 +8,11 @@ import (
 	"github.com/yuristian/go-api/internal/infrastructure/config"
 	"github.com/yuristian/go-api/internal/infrastructure/db"
 	"github.com/yuristian/go-api/internal/infrastructure/middleware"
-	domainUser "github.com/yuristian/go-api/internal/modules/user/domain"
-	userInfra "github.com/yuristian/go-api/internal/modules/user/infrastructure"
-	userRoutes "github.com/yuristian/go-api/internal/modules/user/infrastructure"
-	userUsecase "github.com/yuristian/go-api/internal/modules/user/usecase"
+	"github.com/yuristian/go-api/internal/modules"
+	// userDomain "github.com/yuristian/go-api/internal/modules/user/domain"
+	// userInfra "github.com/yuristian/go-api/internal/modules/user/infrastructure"
+	// userUsecase "github.com/yuristian/go-api/internal/modules/user/usecase"
+	// // Module registry
 )
 
 func main() {
@@ -22,15 +23,15 @@ func main() {
 	r.Use(gin.Recovery())
 
 	gormDB := db.NewGormDB(cfg)
-	gormDB.AutoMigrate(&domainUser.User{}) // migrate User table
+	// gormDB.AutoMigrate(&userDomain.User{}) // migrate User table
 
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.ExpiresIn)
 
-	userRepo := userInfra.NewUserGormRepository(gormDB)
-	userUC := userUsecase.NewUserUsecase(userRepo, jwtManager)
+	// userRepo := userInfra.NewUserGormRepository(gormDB)
+	// userUC := userUsecase.NewUserUsecase(userRepo, jwtManager)
 
 	api := r.Group("/api")
-	userRoutes.RegisterRoutes(api, userUC)
+	modules.RegisterAllModules(api, gormDB, jwtManager)
 
 	protected := api.Group("/protected")
 	protected.Use(middleware.AuthMiddleware(jwtManager))
