@@ -1,0 +1,14 @@
+server:
+  port: 8888
+
+db:
+  type: postgres
+  host: localhost
+  port: 5433
+  user: postgres
+  password: admin
+  name: postgres
+
+jwt:
+  secret: your_jwt_secret
+  expires_in: 3600
