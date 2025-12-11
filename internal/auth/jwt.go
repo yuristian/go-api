@@ -7,8 +7,8 @@ import (
 )
 
 type JWTManager struct {
-	Secret    string
-	ExpiresIn int // seconds
+	Secret    string `yaml:"secret"`
+	ExpiresIn int    `yaml:"expires_in"`
 }
 
 type UserClaims struct {

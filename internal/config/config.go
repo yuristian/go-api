@@ -8,21 +8,23 @@ import (
 
 type Config struct {
 	Server struct {
-		Port int
-	}
+		Port int `mapstructure:"port"`
+	} `mapstructure:"server"`
+
 	DB struct {
-		Type     string
-		Host     string
-		Port     int
-		User     string
-		Password string
-		Name     string
-		SSLMode  string
-	}
+		Type     string `mapstructure:"type"`
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		Name     string `mapstructure:"name"`
+		SSLMode  string `mapstructure:"sslmode"`
+	} `mapstructure:"db"`
+
 	JWT struct {
-		Secret    string
-		ExpiresIn int
-	}
+		Secret    string `mapstructure:"secret"`
+		ExpiresIn int    `mapstructure:"expires_in"`
+	} `mapstructure:"jwt"`
 }
 
 func LoadConfig() *Config {
