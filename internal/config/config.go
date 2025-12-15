@@ -7,24 +7,9 @@ import (
 )
 
 type Config struct {
-	Server struct {
-		Port int `mapstructure:"port"`
-	} `mapstructure:"server"`
-
-	DB struct {
-		Type     string `mapstructure:"type"`
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		Name     string `mapstructure:"name"`
-		SSLMode  string `mapstructure:"sslmode"`
-	} `mapstructure:"db"`
-
-	JWT struct {
-		Secret    string `mapstructure:"secret"`
-		ExpiresIn int    `mapstructure:"expires_in"`
-	} `mapstructure:"jwt"`
+	Server ServerConfig `mapstructure:"server"`
+	DB     DBConfig     `mapstructure:"db"`
+	JWT    JWTConfig    `mapstructure:"jwt"`
 }
 
 func LoadConfig() *Config {
@@ -46,5 +31,19 @@ func LoadConfig() *Config {
 		log.Fatalf("Error parsing config file: %v", err)
 	}
 
+	cfg.validate()
+
 	return cfg
+}
+
+func (c *Config) validate() {
+	if c.JWT.Secret == "" {
+		log.Fatal("JWT secret is required")
+	}
+	if c.JWT.ExpiresIn <= 0 {
+		log.Fatal("JWT expires_in must be > 0")
+	}
+	if c.Server.Port == 0 {
+		log.Fatal("Server port is required")
+	}
 }
