@@ -18,6 +18,7 @@ func RegisterAllModules(rg *gin.RouterGroup, gormDB *gorm.DB, jwtManager *auth.J
 	userUC := userUsecase.NewUserUsecase(userRepo, jwtManager)
 	userInfra.RegisterRoutes(rg, userUC)
 
+	// --- AUTO REGISTER MODULES ---
 	// ----------------------
 	// Module baru nanti ditambahkan di sini:
 	// productRepo := productInfra.NewProductGormRepository(gormDB)
