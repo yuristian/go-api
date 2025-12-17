@@ -1,127 +1,94 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-func GenerateModule(name string) error {
-	module := strings.ToLower(strings.TrimSpace(name))
-
-	// ----------------------------
-	// Validation
-	// ----------------------------
-	if module == "" {
-		return errors.New("module name cannot be empty")
+func GenerateModule(moduleName string) error {
+	if moduleName == "" {
+		return fmt.Errorf("module name cannot be empty")
 	}
 
-	if strings.Contains(module, " ") {
-		return errors.New("module name must not contain spaces")
+	fmt.Println("[CLI] Generating module:", moduleName)
+
+	// 1. Create folder structure
+	if err := createModuleDirectories(moduleName); err != nil {
+		return err
 	}
 
+	// 2. Generate files from templates
+	if err := generateModuleFiles(moduleName); err != nil {
+		return err
+	}
+
+	// 3. Auto-register module (AST-based)
+	if err := AutoRegisterModule(moduleName); err != nil {
+		return err
+	}
+
+	fmt.Println("[CLI] Module generated and registered successfully")
+	return nil
+}
+
+/* =========================
+   DIRECTORY GENERATION
+   ========================= */
+
+func createModuleDirectories(module string) error {
 	basePath := filepath.Join("internal", "modules", module)
 
-	if _, err := os.Stat(basePath); err == nil {
-		return fmt.Errorf("module '%s' already exists", module)
-	}
-
-	fmt.Println("[CLI] Creating module:", module)
-
-	// ----------------------------
-	// Folder structure
-	// ----------------------------
 	dirs := []string{
-		"domain",
-		"infrastructure",
-		"presentation",
-		"usecase",
+		filepath.Join(basePath, "domain"),
+		filepath.Join(basePath, "usecase"),
+		filepath.Join(basePath, "infrastructure"),
+		filepath.Join(basePath, "presentation"),
 	}
 
 	for _, dir := range dirs {
-		path := filepath.Join(basePath, dir)
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	return nil
+}
+
+/* =========================
+   FILE GENERATION
+   ========================= */
+
+func generateModuleFiles(module string) error {
+	data := TemplateData{
+		ModuleName: module,             // product
+		EntityName: capitalize(module), // Product
+	}
+
+	baseTpl := "internal/cli/templates"
+	baseDst := filepath.Join("internal", "modules", module)
+
+	files := []struct {
+		Tpl string
+		Dst string
+	}{
+		{"domain_entity.go.tpl", "domain/entity.go"},
+		{"domain_repository.go.tpl", "domain/repository.go"},
+		{"usecase.go.tpl", "usecase/usecase.go"},
+		{"infra_repository_gorm.go.tpl", "infrastructure/repository_gorm.go"},
+		{"infra_routes.go.tpl", "infrastructure/routes.go"},
+		{"presentation_handler.go.tpl", "presentation/handler.go"},
+	}
+
+	for _, f := range files {
+		if err := writeFromTemplate(
+			filepath.Join(baseDst, f.Dst),
+			filepath.Join(baseTpl, f.Tpl),
+			data,
+		); err != nil {
 			return err
 		}
 	}
 
-	// ----------------------------
-	// Template data
-	// ----------------------------
-	data := TemplateData{
-		ModuleName: module,
-		EntityName: capitalize(module),
-	}
-
-	// ----------------------------
-	// Generate files from templates
-	// ----------------------------
-	err := writeFromTemplate(
-		filepath.Join(basePath, "domain", "entity.go"),
-		"internal/cli/templates/domain_entity.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = writeFromTemplate(
-		filepath.Join(basePath, "domain", "repository.go"),
-		"internal/cli/templates/domain_repository.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = writeFromTemplate(
-		filepath.Join(basePath, "usecase", "usecase.go"),
-		"internal/cli/templates/usecase.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = writeFromTemplate(
-		filepath.Join(basePath, "infrastructure", "repository_gorm.go"),
-		"internal/cli/templates/infra_repository_gorm.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = writeFromTemplate(
-		filepath.Join(basePath, "presentation", "handler.go"),
-		"internal/cli/templates/presentation_handler.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	err = writeFromTemplate(
-		filepath.Join(basePath, "infrastructure", "routes.go"),
-		"internal/cli/templates/infra_routes.go.tpl",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("[CLI] Module generated successfully ✔")
 	return nil
-}
-
-// ----------------------------
-// Helpers
-// ----------------------------
-func capitalize(s string) string {
-	if s == "" {
-		return s
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
 }
