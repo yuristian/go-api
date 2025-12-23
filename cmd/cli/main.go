@@ -50,7 +50,7 @@ func handleModuleCommand(action, name string) {
 }
 
 func printUsage() {
-	fmt.Println(`Usage:
+	fmt.Print(`Usage:
 
   go run ./cmd/cli module create <module_name>
 
