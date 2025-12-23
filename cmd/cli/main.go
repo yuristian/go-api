@@ -38,6 +38,10 @@ func handleModuleCommand(action, name string) {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
+	case "remove":
+		fmt.Println("[CLI] Removing module:", name)
+		cli.RemoveModule(name)
+
 	default:
 		fmt.Println("Unknown module action:", action)
 		printUsage()

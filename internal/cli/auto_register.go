@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"os"
 	"strings"
@@ -40,6 +42,27 @@ func AutoRegisterModule(module string) error {
 	}
 
 	out, err := os.Create(modulesFilePath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	return format.Node(out, fset, file)
+}
+
+func RemoveModuleFromRegistry(module string) error {
+	path := "internal/modules/modules.go"
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
+	if err != nil {
+		return err
+	}
+
+	removeImports(file, module)
+	removeRegisterBlock(file, module)
+
+	out, err := os.Create(path)
 	if err != nil {
 		return err
 	}
@@ -91,6 +114,33 @@ func addImportIfNotExists(file *ast.File, path, alias string) {
 
 	file.Decls = append([]ast.Decl{gen}, file.Decls...)
 	file.Imports = append(file.Imports, spec)
+}
+
+func removeImports(file *ast.File, module string) {
+	var newDecls []ast.Decl
+
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.IMPORT {
+			newDecls = append(newDecls, decl)
+			continue
+		}
+
+		var specs []ast.Spec
+		for _, spec := range gen.Specs {
+			imp := spec.(*ast.ImportSpec)
+			if !strings.Contains(imp.Path.Value, "/modules/"+module+"/") {
+				specs = append(specs, spec)
+			}
+		}
+
+		if len(specs) > 0 {
+			gen.Specs = specs
+			newDecls = append(newDecls, gen)
+		}
+	}
+
+	file.Decls = newDecls
 }
 
 /* =========================
@@ -182,6 +232,37 @@ func containsModule(stmt ast.Stmt, module string) bool {
 	return strings.Contains(fmt.Sprintf("%#v", stmt), module)
 }
 
+func removeRegisterBlock(file *ast.File, module string) {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "RegisterAllModules" {
+			continue
+		}
+
+		var stmts []ast.Stmt
+		skip := false
+
+		for _, stmt := range fn.Body.List {
+			if isModuleHeader(stmt, module) {
+				skip = true
+				continue
+			}
+
+			if skip {
+				if isNextModuleHeader(stmt) {
+					skip = false
+					stmts = append(stmts, stmt)
+				}
+				continue
+			}
+
+			stmts = append(stmts, stmt)
+		}
+
+		fn.Body.List = stmts
+	}
+}
+
 /* =========================
    UTIL
    ========================= */
@@ -191,4 +272,24 @@ func capitalize(s string) string {
 		return s
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func astToString(node ast.Node) string {
+	var buf bytes.Buffer
+	_ = printer.Fprint(&buf, token.NewFileSet(), node)
+	return buf.String()
+}
+
+func isModuleHeader(stmt ast.Stmt, module string) bool {
+	c, ok := stmt.(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+
+	comment := strings.ToLower(astToString(c))
+	return strings.Contains(comment, module+" module")
+}
+
+func isNextModuleHeader(stmt ast.Stmt) bool {
+	return strings.Contains(astToString(stmt), "Module")
 }
