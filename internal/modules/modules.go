@@ -17,4 +17,5 @@ func RegisterAllModules(rg *gin.RouterGroup, gormDB *gorm.DB, jwtManager *auth.J
 	userRepo := userInfra.NewUserGormRepository(gormDB)
 	userUC := userUsecase.NewUserUsecase(userRepo, jwtManager)
 	userInfra.RegisterRoutes(rg, userUC)
+
 }

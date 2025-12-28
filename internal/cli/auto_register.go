@@ -1,12 +1,10 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
-	"go/printer"
 	"go/token"
 	"os"
 	"strings"
@@ -239,27 +237,21 @@ func removeRegisterBlock(file *ast.File, module string) {
 			continue
 		}
 
-		var stmts []ast.Stmt
-		skip := false
+		var newStmts []ast.Stmt
 
 		for _, stmt := range fn.Body.List {
-			if isModuleHeader(stmt, module) {
-				skip = true
+			if isModuleConstructorStmt(stmt, module) {
 				continue
 			}
 
-			if skip {
-				if isNextModuleHeader(stmt) {
-					skip = false
-					stmts = append(stmts, stmt)
-				}
+			if isModuleRegisterRoutesStmt(stmt, module) {
 				continue
 			}
 
-			stmts = append(stmts, stmt)
+			newStmts = append(newStmts, stmt)
 		}
 
-		fn.Body.List = stmts
+		fn.Body.List = newStmts
 	}
 }
 
@@ -274,22 +266,67 @@ func capitalize(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
-func astToString(node ast.Node) string {
-	var buf bytes.Buffer
-	_ = printer.Fprint(&buf, token.NewFileSet(), node)
-	return buf.String()
-}
+// func astToString(node ast.Node) string {
+// 	var buf bytes.Buffer
+// 	_ = printer.Fprint(&buf, token.NewFileSet(), node)
+// 	return buf.String()
+// }
 
-func isModuleHeader(stmt ast.Stmt, module string) bool {
-	c, ok := stmt.(*ast.ExprStmt)
+func isModuleConstructorStmt(stmt ast.Stmt, module string) bool {
+	assign, ok := stmt.(*ast.AssignStmt)
 	if !ok {
 		return false
 	}
 
-	comment := strings.ToLower(astToString(c))
-	return strings.Contains(comment, module+" module")
+	for _, rhs := range assign.Rhs {
+		call, ok := rhs.(*ast.CallExpr)
+		if !ok {
+			continue
+		}
+
+		switch fun := call.Fun.(type) {
+
+		// Case: NewProduct(...)
+		case *ast.Ident:
+			if fun.Name == "New"+capitalize(module) {
+				return true
+			}
+
+		// Case: productUsecase.NewProductUsecase(...)
+		//       productInfra.NewProductGormRepository(...)
+		case *ast.SelectorExpr:
+			if strings.HasPrefix(fun.Sel.Name, "New"+capitalize(module)) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
-func isNextModuleHeader(stmt ast.Stmt) bool {
-	return strings.Contains(astToString(stmt), "Module")
+func isModuleRegisterRoutesStmt(stmt ast.Stmt, module string) bool {
+	exprStmt, ok := stmt.(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+
+	call, ok := exprStmt.X.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+
+	pkg, ok := selector.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+
+	expectedPkg := module + "Infra"
+
+	return pkg.Name == expectedPkg &&
+		selector.Sel.Name == "RegisterRoutes"
 }
